@@ -1,81 +1,183 @@
+import { useEffect, useState } from 'react'
+import { getStudents, createStudent, updateStudent, deleteStudent } from './api'
+import { dateToTimestampSeconds, timestampSecondsToDateInput, timestampSecondsToReadable } from './utils'
+
 function App() {
+  const [students, setStudents] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const [form, setForm] = useState({ name: '', dob: '', studentID: '' })
+  const [editingId, setEditingId] = useState(null)
+
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await getStudents()
+      setStudents(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const payload = {
+        name: form.name,
+        dob: dateToTimestampSeconds(form.dob), // convert to seconds
+        studentID: form.studentID,
+      }
+
+      if (editingId) {
+        await updateStudent(editingId, payload)
+      } else {
+        await createStudent(payload)
+      }
+
+      setForm({ name: '', dob: '', studentID: '' })
+      setEditingId(null)
+      await load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onEdit = (student) => {
+    setForm({
+      name: student.name || '',
+      dob: timestampSecondsToDateInput(student.dob),
+      studentID: student.studentID || '',
+    })
+    setEditingId(student.id)
+  }
+
+  const onDelete = async (id) => {
+    if (!confirm('Delete this student?')) return
+    setLoading(true)
+    setError(null)
+    try {
+      await deleteStudent(id)
+      await load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-4">Welcome to Our Amazing Product</h1>
-          <p className="text-xl mb-8">Discover the future of innovation with our cutting-edge solutions.</p>
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition duration-300">
-            Get Started
-          </button>
-        </div>
-      </section>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-center mb-8">Student Management</h1>
 
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <div className="text-4xl mb-4">🚀</div>
-              <h3 className="text-xl font-semibold mb-2">Fast Performance</h3>
-              <p className="text-gray-600">Lightning-fast speeds to keep you ahead of the competition.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <div className="text-4xl mb-4">🔒</div>
-              <h3 className="text-xl font-semibold mb-2">Secure</h3>
-              <p className="text-gray-600">Top-notch security to protect your data and privacy.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-              <div className="text-4xl mb-4">🎨</div>
-              <h3 className="text-xl font-semibold mb-2">Beautiful Design</h3>
-              <p className="text-gray-600">Stunning visuals that captivate and engage your audience.</p>
-            </div>
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
+
+        <form onSubmit={onSubmit} className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+              name="name"
+              value={form.name}
+              onChange={onChange}
+              placeholder="Name"
+              required
+              className="border border-gray-300 p-2 rounded"
+            />
+            <input
+              name="dob"
+              type="date"
+              value={form.dob}
+              onChange={onChange}
+              required
+              className="border border-gray-300 p-2 rounded"
+            />
+            <input
+              name="studentID"
+              value={form.studentID}
+              onChange={onChange}
+              placeholder="Student ID"
+              required
+              className="border border-gray-300 p-2 rounded"
+            />
           </div>
-        </div>
-      </section>
 
-      {/* Testimonials Section */}
-      <section className="bg-gray-100 py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">What Our Users Say</h2>
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-lg flex-1">
-              <p className="text-gray-600 mb-4">"This product has transformed our workflow. Highly recommended!"</p>
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">J</div>
-                <div>
-                  <p className="font-semibold">John Doe</p>
-                  <p className="text-sm text-gray-500">CEO, TechCorp</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-lg flex-1">
-              <p className="text-gray-600 mb-4">"Incredible features and amazing support. Five stars!"</p>
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-3">S</div>
-                <div>
-                  <p className="font-semibold">Sarah Smith</p>
-                  <p className="text-sm text-gray-500">Designer, CreativeCo</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2026 Our Company. All rights reserved.</p>
           <div className="mt-4">
-            <a href="#" className="text-gray-400 hover:text-white mx-2">Privacy Policy</a>
-            <a href="#" className="text-gray-400 hover:text-white mx-2">Terms of Service</a>
-            <a href="#" className="text-gray-400 hover:text-white mx-2">Contact</a>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+            >
+              {editingId ? 'Update Student' : 'Add Student'}
+            </button>
+
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null)
+                  setForm({ name: '', dob: '', studentID: '' })
+                }}
+                className="ml-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            )}
           </div>
-        </div>
-      </footer>
+        </form>
+
+        {loading && !students.length ? (
+          <div className="text-center">Loading...</div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-4 text-left">Name</th>
+                  <th className="p-4 text-left">DOB</th>
+                  <th className="p-4 text-left">Student ID</th>
+                  <th className="p-4 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((s) => (
+                  <tr key={s.id} className="border-t">
+                    <td className="p-4">{s.name}</td>
+                    <td className="p-4">{timestampSecondsToReadable(s.dob)}</td>
+                    <td className="p-4">{s.studentID}</td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => onEdit(s)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDelete(s.id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
