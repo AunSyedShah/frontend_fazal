@@ -15,6 +15,12 @@ function App() {
     setError(null)
     try {
       const data = await getStudents()
+      // Log any entries missing an id to help debug server data issues
+      const missingId = data.filter((s) => s.id === undefined || s.id === null)
+      if (missingId.length) {
+        console.warn('Fetched students with missing id:', missingId)
+        setError('Some student records are missing ids. Check server data. See console for details.')
+      }
       setStudents(data)
     } catch (err) {
       setError(err.message)
@@ -57,6 +63,12 @@ function App() {
   }
 
   const onEdit = (student) => {
+    if (!student || !student.id) {
+      setError('Cannot edit this student: missing id')
+      console.warn('Attempted to edit student without id', student)
+      return
+    }
+
     setForm({
       name: student.name || '',
       dob: timestampSecondsToDateInput(student.dob),
@@ -66,6 +78,12 @@ function App() {
   }
 
   const onDelete = async (id) => {
+    if (!id) {
+      setError('Cannot delete this student: missing id')
+      console.warn('Attempted to delete student with undefined id')
+      return
+    }
+
     if (!confirm('Delete this student?')) return
     setLoading(true)
     setError(null)

@@ -23,16 +23,18 @@ export async function createStudent(student) {
 }
 
 export async function updateStudent(id, student) {
+  if (!id) throw new Error('Invalid id for update')
   const res = await fetch(`${base}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(student),
-  });
-  return checkRes(res);
+  })
+  return checkRes(res)
 }
 
 export async function deleteStudent(id) {
-  const res = await fetch(`${base}/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Delete failed');
-  return true;
+  if (!id) throw new Error('Invalid id for delete')
+  const res = await fetch(`${base}/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error('Delete failed: ' + res.statusText)
+  return true
 }
